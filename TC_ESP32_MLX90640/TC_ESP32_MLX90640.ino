@@ -4,9 +4,9 @@
  * - https://github.com/sparkfun/SparkFun_MLX90640_Arduino_Example
  * 
  * Hardware:
- * - ESP32: https://www.espressif.com/en/products/hardware/esp32-devkitc/overview
- * - Sensor: https://shop.pimoroni.com/products/mlx90640-thermal-camera-breakout
- * - Display: https://www.amazon.de/gp/product/B07DPMV34R/, https://www.pjrc.com/store/display_ili9341.html
+ * - ESP32: https://www.espressif.com/en/products/hardware/esp32-devkitc/overview 
+ * - Sensor: https://shop.pimoroni.com/products/mlx90640-thermal-camera-breakout - 32x24
+ * - Display: https://www.amazon.de/gp/product/B07DPMV34R/ - 240x320
  */
 
 
@@ -40,7 +40,6 @@ paramsMLX90640 mlx90640;
 
 TFT_eSPI Display = TFT_eSPI();
 
-
 // Added for measure Temp
 boolean measure = true;
 float centerTemp;
@@ -64,9 +63,8 @@ int x, y, i, j;
 static float tempValues[32*24];
 
 // Output size
-#define O_WIDTH 224
-#define O_HEIGHT 168
-#define O_RATIO O_WIDTH/32
+#define O_WIDTH 256
+#define O_HEIGHT 192
 
 float **interpolated = NULL;
 uint16_t *imageData = NULL;
@@ -102,7 +100,7 @@ void setup() {
   SPI.begin();
   SPI.setFrequency(80000000L);
   Display.begin();
-  //Display.setRotation(3);
+  Display.setRotation(3);
   Display.fillScreen(C_BLACK);
 
 
@@ -160,15 +158,15 @@ float temp, temp2;
 void interpolate() {
   for (row=0; row<24; row++) {
     for (x=0; x<O_WIDTH; x++) {
-      temp  = tempValues[(31 - (x/7)) + (row*32) + 1];
-      temp2 = tempValues[(31 - (x/7)) + (row*32)];
-      interpolated[row*7][x] = lerp(temp, temp2, x%7/7.0);
+      temp  = tempValues[(31 - (x/8)) + (row*32) + 1];
+      temp2 = tempValues[(31 - (x/8)) + (row*32)];
+      interpolated[row*8][x] = lerp(temp, temp2, x%8/8.0);
     }
   }
   for (x=0; x<O_WIDTH; x++) {
     for (y=0; y<O_HEIGHT; y++) {
-      temp  = interpolated[y-y%7][x];
-      temp2 = interpolated[min((y-y%7)+7, O_HEIGHT-7)][x];
+      temp  = interpolated[y-y%8][x];
+      temp2 = interpolated[min((y-y%8)+8, O_HEIGHT-8)][x];
       interpolated[y][x] = lerp(temp, temp2, 1);//y%7/7.0);
     }
   }
@@ -194,7 +192,7 @@ void drawPicture() {
   else {
     for (y=0; y<24; y++) {
       for (x=0; x<32; x++) {
-        Display.fillRect(8 + x*7, 8 + y*7, 7, 7, getColor(tempValues[(31-x) + (y*32)]));
+        Display.fillRect(8 + x*8, 8 + y*8, 8, 8, getColor(tempValues[(31-x) + (y*32)]));
       }
     }
   }
@@ -269,19 +267,19 @@ void setAbcd() {
 
 // Draw a legend.
 void drawLegend() {
-  float inc = (maxTemp - minTemp) / 224.0;
+  float inc = (maxTemp - minTemp) / 208.0;
   j = 0;
   for (ii = minTemp; ii < maxTemp; ii += inc) {
-    Display.drawFastVLine(8+ + j++, 292, 20, getColor(ii));
+    Display.drawFastHLine(285, 16 + j++, 10, getColor(ii));
   }
 
   Display.setTextFont(2);
   Display.setTextSize(1);
-  Display.setCursor(8, 272);
+  Display.setCursor(276, 8);
   Display.setTextColor(TFT_WHITE, TFT_BLACK);
   Display.print(String(minTemp).substring(0, 5));
 
-  Display.setCursor(192, 272);
+  Display.setCursor(276, 224);
   Display.setTextColor(TFT_WHITE, TFT_BLACK);
   Display.print(String(maxTemp).substring(0, 5));
 
@@ -297,7 +295,7 @@ void drawMeasurement() {
 
   // Measure and print center temperature
   centerTemp = (tempValues[383 - 16] + tempValues[383 - 15] + tempValues[384 + 15] + tempValues[384 + 16]) / 4;
-  Display.setCursor(86, 214);
+  Display.setCursor(86, 210);
   Display.setTextColor(TFT_WHITE, TFT_BLACK);
   Display.setTextFont(2);
   Display.setTextSize(2);
