@@ -9,7 +9,6 @@
  * - Display: https://www.amazon.de/gp/product/B07DPMV34R/ - 240x320
  */
 
-
 #include <TFT_eSPI.h>
 #include <SD.h>
 #include <SPI.h>
@@ -19,7 +18,7 @@
 #include "MLX90640_I2C_Driver.h"
 
 #define EMMISIVITY 0.95
-#define INTERPOLATE false
+#define INTERPOLATE true
 
 #define C_BLUE Display.color565(0,0,255)
 #define C_RED Display.color565(255,0,0)
@@ -126,7 +125,7 @@ void loop() {
   readTempValues();
   setTempScale();
   drawPicture();
-  drawMeasurement();
+  /* drawMeasurement(); */
 }
 
 
@@ -181,13 +180,16 @@ float lerp(float v0, float v1, float t) {
 
 void drawPicture() {
   if (INTERPOLATE) {
-    interpolate();
+    /* interpolate(); */
     for (y=0; y<O_HEIGHT; y++) {
       for (x=0; x<O_WIDTH; x++) {
-        imageData[(y*O_WIDTH) + x] = getColor(interpolated[y][x]);
+        /* imageData[(y*O_WIDTH) + x] = getColor(interpolated[y][x]); */
+        imageData[(y*O_WIDTH) + x] = C_RED;
       }
     }
-    Display.pushImage(8, 8, O_WIDTH, O_HEIGHT, imageData);
+    if ((8 + O_WIDTH) <= Display.width() && (8 + O_HEIGHT) <= Display.height()){
+      Display.pushImage(8, 8, O_HEIGHT, O_WIDTH, imageData);
+    }
   }
   else {
     for (y=0; y<24; y++) {
