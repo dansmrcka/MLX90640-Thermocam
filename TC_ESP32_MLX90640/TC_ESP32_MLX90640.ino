@@ -57,7 +57,6 @@ byte red, green, blue;
 float intPoint, val, a, b, c, d, ii;
 int x, y, i, j;
 
-
 // array for the 32 x 24 measured tempValues
 static float tempValues[32*24];
 
@@ -65,7 +64,6 @@ static float tempValues[32*24];
 #define O_WIDTH 256
 #define O_HEIGHT 192
 
-float **interpolated = NULL;
 uint16_t *imageData = NULL;
 
 void setup() {
@@ -100,14 +98,8 @@ void setup() {
   SPI.setFrequency(80000000L);
   Display.begin();
   Display.setRotation(3);
+  Display.setSwapBytes(true);
   Display.fillScreen(C_BLACK);
-
-
-  // Prepare interpolated array
-  interpolated = (float **)malloc(O_HEIGHT * sizeof(float *));
-  for (int i=0; i<O_HEIGHT; i++) {
-    interpolated[i] = (float *)malloc(O_WIDTH * sizeof(float));
-  }
 
   // Prepare imageData array
   imageData = (uint16_t *)malloc(O_WIDTH * O_HEIGHT * sizeof(uint16_t));
@@ -125,7 +117,7 @@ void loop() {
   readTempValues();
   setTempScale();
   drawPicture();
-  /* drawMeasurement(); */
+  drawMeasurement();
 }
 
 
@@ -151,53 +143,21 @@ void readTempValues() {
 }
 
 
-int row;
-float temp, temp2;
-
-void interpolate() {
-  for (row=0; row<24; row++) {
-    for (x=0; x<O_WIDTH; x++) {
-      temp  = tempValues[(31 - (x/8)) + (row*32) + 1];
-      temp2 = tempValues[(31 - (x/8)) + (row*32)];
-      interpolated[row*8][x] = lerp(temp, temp2, x%8/8.0);
-    }
-  }
-  for (x=0; x<O_WIDTH; x++) {
-    for (y=0; y<O_HEIGHT; y++) {
-      temp  = interpolated[y-y%8][x];
-      temp2 = interpolated[min((y-y%8)+8, O_HEIGHT-8)][x];
-      interpolated[y][x] = lerp(temp, temp2, 1);//y%7/7.0);
-    }
-  }
-}
-
-
-// Linear interpolation
-float lerp(float v0, float v1, float t) {
-  return v0 + t * (v1 - v0);
-}
-
-
 void drawPicture() {
-  if (INTERPOLATE) {
-    /* interpolate(); */
-    for (y=0; y<O_HEIGHT; y++) {
-      for (x=0; x<O_WIDTH; x++) {
-        /* imageData[(y*O_WIDTH) + x] = getColor(interpolated[y][x]); */
-        imageData[(y*O_WIDTH) + x] = C_RED;
-      }
-    }
-    if ((8 + O_WIDTH) <= Display.width() && (8 + O_HEIGHT) <= Display.height()){
-      Display.pushImage(8, 8, O_HEIGHT, O_WIDTH, imageData);
+  for (y=0; y<O_HEIGHT; y++) {
+    for (x=0; x<O_WIDTH; x++) {
+      imageData[(y*O_WIDTH) + x] = getColor(tempValues[(31-x/8) + (y/8*32)]);
+      /* Display.fillRect(8 + x*8, 8 + y*8, 8, 8, getColor()); */
     }
   }
-  else {
-    for (y=0; y<24; y++) {
-      for (x=0; x<32; x++) {
-        Display.fillRect(8 + x*8, 8 + y*8, 8, 8, getColor(tempValues[(31-x) + (y*32)]));
-      }
-    }
+
+  if ((8 + O_WIDTH) <= Display.width() && (8 + O_HEIGHT) <= Display.height()){
+    Display.pushImage(8, 8, O_WIDTH, O_HEIGHT, imageData);
+
+  }else{
+    Serial.println("Image outside of the display size");
   }
+  
 }
 
 
